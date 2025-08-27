@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Password Generator & Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#6366f1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --text:#e6eef8; }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:linear-gradient(180deg,#071226 0%,#071229 60%); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px}
+    .wrap{width:960px; max-width:100%;}
+    .card{background:radial-gradient(600px 300px at 10% 10%, rgba(99,102,241,.06), transparent 10%), var(--card); border-radius:14px; padding:20px; box-shadow:0 10px 30px rgba(2,6,23,.6); border:1px solid rgba(148,163,184,.06)}
+    h1{margin:0 0 6px; font-size:20px}
+    p.lead{margin:0 0 18px; color:var(--muted)}
+
+    .controls{display:grid; grid-template-columns: 1fr 300px; gap:14px}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,.02), transparent); padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,.05)}
+
+    label{display:block; font-weight:600; margin-bottom:6px}
+    .row{display:flex; gap:8px; align-items:center}
+    input[type=text]{width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(148,163,184,.08); background:transparent; color:var(--text)}
+    button{background:linear-gradient(180deg,var(--accent),#4f46e5); color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600}
+    .muted{color:var(--muted); font-size:13px}
+
+    .opts{display:flex; flex-direction:column; gap:8px}
+    .opt{display:flex; gap:10px; align-items:center}
+    .opt input{width:18px; height:18px}
+    .inline{display:flex; gap:8px; align-items:center}
+
+    .output{display:flex; gap:8px; align-items:center}
+    .pwbox{flex:1; background:rgba(255,255,255,.03); padding:12px; border-radius:8px; border:1px solid rgba(148,163,184,.06); font-family:monospace; font-size:16px}
+    .small{font-size:13px}
+
+    .meter{height:12px; background:rgba(255,255,255,.04); border-radius:8px; overflow:hidden}
+    .meter > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--bad),var(--warn),var(--good)); transition:width .25s}
+
+    .stats{display:flex; gap:12px; margin-top:12px; flex-wrap:wrap}
+    .stat{background:rgba(255,255,255,.02); padding:8px 10px; border-radius:8px; font-size:13px; border:1px solid rgba(148,163,184,.04)}
+
+    footer{margin-top:14px; display:flex; justify-content:space-between; align-items:center}
+    a.link{color:var(--muted); text-decoration:none}
+
+    @media(max-width:880px){ .controls{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Password Generator & Checker</h1>
+      <p class="lead">Generate strong passwords or evaluate any password's strength. Includes entropy estimate, crack-time approximation, and suggestions.</p>
+
+      <div class="controls">
+        <!-- Left: Generator & Checker -->
+        <div class="panel">
+          <label for="generated">Generated password</label>
+          <div class="row output">
+            <div id="generated" class="pwbox" aria-live="polite">pick options and click Generate</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button id="generate">Generate</button>
+              <button id="copyBtn">Copy</button>
+            </div>
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div class="opts">
+            <div class="opt inline">
+              <label for="length">Length</label>
+              <input id="length" type="range" min="6" max="64" value="16" style="flex:1">
+              <div id="lenVal" class="muted">16</div>
+            </div>
+
+            <div class="opt">
+              <input id="lower" type="checkbox" checked>
+              <label for="lower">Lowercase (a-z)</label>
+            </div>
+            <div class="opt">
+              <input id="upper" type="checkbox" checked>
+              <label for="upper">Uppercase (A-Z)</label>
+            </div>
+            <div class="opt">
+              <input id="numbers" type="checkbox" checked>
+              <label for="numbers">Numbers (0-9)</label>
+            </div>
+            <div class="opt">
+              <input id="symbols" type="checkbox" checked>
+              <label for="symbols">Symbols (!@#$...)</label>
+            </div>
+            <div class="opt">
+              <input id="passphrase" type="checkbox">
+              <label for="passphrase">Generate passphrase (random words)</label>
+            </div>
+
+            <div class="opt inline">
+              <label for="sep">Separator (for passphrase)</label>
+              <input id="sep" type="text" value="-" style="width:70px">
+            </div>
+
+            <div class="opt">
+              <label class="muted">Quick presets:</label>
+              <div style="display:flex;gap:8px">
+                <button data-preset="12">12</button>
+                <button data-preset="16">16</button>
+                <button data-preset="24">24</button>
+                <button data-preset="32">32</button>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none;height:1px;background:rgba(255,255,255,.03);margin:12px 0">
+
+          <label for="checkInput">Check any password</label>
+          <div class="row" style="gap:8px">
+            <input id="checkInput" type="text" placeholder="Paste password to evaluate">
+            <button id="checkBtn">Check</button>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="meter" aria-hidden="true"><i id="meterFill"></i></div>
+
+          <div class="stats">
+            <div class="stat">Entropy: <strong id="entropy">—</strong> bits</div>
+            <div class="stat">Estimated crack time: <strong id="crackTime">—</strong></div>
+            <div class="stat">Pool size: <strong id="pool">—</strong></div>
+            <div class="stat">Recommendations: <strong id="suggest">—</strong></div>
+          </div>
+        </div>
+
+        <!-- Right: Info, wordlist, tips -->
+        <div class="panel">
+          <label>About</label>
+          <p class="muted">This tool estimates password strength using entropy = length × log₂(character_pool_size). It also shows an approximate crack-time using conservative guesses-per-second. Passphrases (multiple random words) are usually stronger and easier to remember.</p>
+
+          <label>Password Strength Guide</label>
+          <ul class="muted">
+            <li>Entropy &gt; 80 bits: Excellent for long-term secrets.</li>
+            <li>60–80 bits: Good for most accounts.</li>
+            <li>40–60 bits: Weak–moderate; consider increasing length or variety.</li>
+            <li>&lt; 40 bits: Weak — unsafe for sensitive accounts.</li>
+          </ul>
+
+          <label>Small wordlist (used for passphrases)</label>
+          <div class="muted" id="wordPreview" style="font-family:monospace; font-size:13px; max-height:160px; overflow:auto; padding:8px; background:rgba(255,255,255,.02); border-radius:8px">apple
+banana
+orange
+cherry
+delta
+echo
+fox
+hotel
+india
+juno
+kite
+lemon
+mango
+nectar
+olive
+pearl
+quartz
+river
+sunset
+tango
+umbrella
+violet
+whale
+xray
+yacht
+zebra</div>
+
+          <footer>
+            <small class="muted">Built-in estimator • No network calls</small>
+            <a class="link" href="#" id="more">More info</a>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utilities
+    const $ = id => document.getElementById(id);
+    const rand = n => Math.floor(Math.random()*n);
+
+    // Character sets
+    const sets = {
+      lower: 'abcdefghijklmnopqrstuvwxyz',
+      upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      numbers: '0123456789',
+      symbols: '!@#$%^&*()_+-=[]{}|;:,.<>/?~' // reasonable symbol set
+    };
+
+    // Small wordlist (kept in-file); in real apps use a bigger curated list
+    const wordlist = `apple
+banana
+orange
+cherry
+delta
+echo
+fox
+hotel
+india
+juno
+kite
+lemon
+mango
+nectar
+olive
+pearl
+quartz
+river
+sunset
+tango
+umbrella
+violet
+whale
+xray
+yacht
+zebra`.split(/\n/).map(s=>s.trim()).filter(Boolean);
+
+    // DOM
+    const generated = $('generated');
+    const lengthEl = $('length'); const lenVal = $('lenVal');
+    const lower = $('lower'), upper = $('upper'), numbers = $('numbers'), symbols = $('symbols'), passphrase = $('passphrase');
+    const sep = $('sep');
+    const generateBtn = $('generate'), copyBtn = $('copyBtn');
+    const checkInput = $('checkInput'), checkBtn = $('checkBtn');
+    const meterFill = $('meterFill');
+    const entropyEl = $('entropy'), crackEl = $('crackTime'), poolEl = $('pool'), suggestEl = $('suggest');
+
+    // helpers
+    function buildPool(){
+      let pool = '';
+      if(lower.checked) pool += sets.lower;
+      if(upper.checked) pool += sets.upper;
+      if(numbers.checked) pool += sets.numbers;
+      if(symbols.checked) pool += sets.symbols;
+      return pool;
+    }
+
+    function generatePassword(){
+      const L = parseInt(lengthEl.value,10);
+      if(passphrase.checked){
+        // Make passphrase: choose words until entropy target roughly matches length-ish
+        // We will choose L words if L <= 10 else cap
+        const wordsCount = Math.max(3, Math.min(8, Math.round(L/6))); // heuristic
+        const chosen = [];
+        for(let i=0;i<wordsCount;i++) chosen.push(wordlist[rand(wordlist.length)]);
+        return chosen.join(sep.value || '-')
+      }
+
+      const pool = buildPool();
+      if(!pool) return 'Select at least one character set';
+      let out = '';
+      for(let i=0;i<L;i++) out += pool[rand(pool.length)];
+      return out;
+    }
+
+    function estimate(password){
+      // Estimate character pool size
+      let poolSize = 0;
+      if(/[a-z]/.test(password)) poolSize += sets.lower.length;
+      if(/[A-Z]/.test(password)) poolSize += sets.upper.length;
+      if(/[0-9]/.test(password)) poolSize += sets.numbers.length;
+      if(/[^A-Za-z0-9]/.test(password)) poolSize += sets.symbols.length;
+      // If it's a passphrase made of words separated by non-alphanum, estimate from wordlist
+      const words = password.split(/[^A-Za-z0-9]+/).filter(Boolean);
+      let isLikelyPassphrase = words.length > 1 && words.every(w => w.length>0 && /^[a-zA-Z]+$/.test(w));
+      let entropy = 0;
+      if(isLikelyPassphrase){
+        // assume choices = wordlist.length per word
+        entropy = words.length * Math.log2(wordlist.length || 2048);
+        poolSize = wordlist.length;
+      } else {
+        // fallback: entropy = length * log2(poolSize)
+        const pool = Math.max(poolSize, 2);
+        entropy = password.length * Math.log2(pool);
+      }
+
+      // Crack time estimation: guesses per second
+      // Conservative rates: offline slow (1e6), offline fast GPU (1e10), online throttled (100)
+      const guesses = Math.pow(2, entropy);
+      const rates = {online:100, offline_slow:1e6, offline_fast:1e10};
+      const secs_fast = guesses / rates.offline_fast;
+      const best = secs_fast;
+
+      return {entropy: Math.round(entropy*10)/10, poolSize, guesses, secs_fast, wordsCount: words.length, isLikelyPassphrase};
+    }
+
+    function humanTime(seconds){
+      if(!isFinite(seconds) || seconds>1e18) return '≫ centuries';
+      const units = [ ['years', 60*60*24*365], ['days', 60*60*24], ['hours',3600], ['minutes',60], ['seconds',1] ];
+      for(let [name, secPer] of units){
+        if(seconds >= secPer){
+          const val = Math.floor(seconds / secPer);
+          return `${val} ${name}`;
+        }
+      }
+      return `${Math.round(seconds*100)/100} seconds`;
+    }
+
+    function updateMeter(entropy){
+      // Map entropy to 0-100
+      const max = 120; // cap for meter
+      const pct = Math.max(0, Math.min(100, (entropy / max) * 100));
+      meterFill.style.width = pct + '%';
+      // set color-ish by adjusting gradient via CSS var is static, so we rely on width
+    }
+
+    function evaluateAndShow(pw){
+      if(!pw){ entropyEl.textContent='—'; crackEl.textContent='—'; poolEl.textContent='—'; suggestEl.textContent='Provide a password'; meterFill.style.width='0%'; return; }
+      const r = estimate(pw);
+      entropyEl.textContent = r.entropy;
+      poolEl.textContent = r.poolSize || (r.isLikelyPassphrase ? wordlist.length : '—');
+      // choose the fastest crack estimate (offline_fast)
+      const secs = r.secs_fast;
+      crackEl.textContent = humanTime(secs);
+      updateMeter(r.entropy);
+
+      // Suggestions
+      const tips = [];
+      if(r.entropy < 40) tips.push('Increase length and include more variety');
+      if(!/[a-z]/.test(pw)) tips.push('Add lowercase letters');
+      if(!/[A-Z]/.test(pw)) tips.push('Add uppercase letters');
+      if(!/[0-9]/.test(pw)) tips.push('Add numbers');
+      if(!/[^A-Za-z0-9]/.test(pw)) tips.push('Add symbols');
+      if(r.isLikelyPassphrase && r.wordsCount < 4) tips.push('Use 4+ random words for a stronger passphrase');
+      if(tips.length===0) tips.push('Looks good — still use MFA where available');
+      suggestEl.textContent = tips.join('; ');
+    }
+
+    // Events
+    lengthEl.addEventListener('input', ()=>{ lenVal.textContent = lengthEl.value });
+    generateBtn.addEventListener('click', ()=>{
+      const pw = generatePassword();
+      generated.textContent = pw;
+      evaluateAndShow(pw);
+      // also populate checkInput for convenience
+      checkInput.value = pw;
+    });
+
+    copyBtn.addEventListener('click', async ()=>{
+      const txt = generated.textContent;
+      try{
+        await navigator.clipboard.writeText(txt);
+        copyBtn.textContent = 'Copied';
+        setTimeout(()=> copyBtn.textContent = 'Copy', 1200);
+      } catch(e){
+        // fallback
+        const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        copyBtn.textContent = 'Copied'; setTimeout(()=> copyBtn.textContent = 'Copy', 1200);
+      }
+    });
+
+    checkBtn.addEventListener('click', ()=>{
+      const pw = checkInput.value.trim();
+      evaluateAndShow(pw);
+      generated.textContent = pw;
+    });
+
+    // presets
+    document.querySelectorAll('button[data-preset]').forEach(b=> b.addEventListener('click', ()=>{ lengthEl.value = b.dataset.preset; lenVal.textContent = b.dataset.preset }));
+
+    // live evaluate while typing (debounce)
+    let typingTimer = null;
+    checkInput.addEventListener('input', ()=>{ clearTimeout(typingTimer); typingTimer=setTimeout(()=>{ evaluateAndShow(checkInput.value); }, 350); });
+
+    // initial generate
+    generateBtn.click();
+
+    // More info link
+    $('more').addEventListener('click', (e)=>{ e.preventDefault(); alert('Entropy (bits) approximates password unpredictability. Use long unique passwords and enable MFA. This tool is local-only. Do not paste highly sensitive production secrets into arbitrary websites.'); });
+  </script>
+</body>
+</html>
